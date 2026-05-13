@@ -114,6 +114,7 @@ class PropRAG:
 
 		# Update the vector database.
 		self.vectordb.update_table(table_name, props)
+		self.graphdb.checkpoint()
 		gc.collect()
 
 

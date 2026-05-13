@@ -57,3 +57,7 @@ class LadybugGraphDB:
 			LIMIT 10
         """
 		return self.conn.execute(query, {"id": id})
+
+
+	def checkpoint(self) -> None:
+		self.conn.execute("PRAGMA wal_checkpoint(FULL);")
