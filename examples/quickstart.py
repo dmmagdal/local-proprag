@@ -70,6 +70,7 @@ def main():
 	device = detect_device()
 	# nomic-ai/nomic-embed-text-v1.5
 	# sentence-transformers/all-MiniLM-L6-v2
+	print(f"Running on device: {device}")
 
 	# Initialize proprag with the configuration.
 	proprag = PropRAG(
