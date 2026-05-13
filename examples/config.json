@@ -11,7 +11,7 @@
             "metric": "cosine"
         },
         "graph": {
-            "graph_db": "./graph.db"
+            "graph_db": "./graph"
         },
         "llm": {
             "host": "http://localhost:11434",
