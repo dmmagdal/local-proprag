@@ -17,8 +17,7 @@
             "host": "http://localhost:11434",
             "model_id": "phi4-mini-reasoning:3.8b",
             "gliner_model": "knowledgator/gliner-multitask-large-v0.5",
-            "spacy_model": "en_core_web_lg",
-            "summary_model": "google/flan-t5-large"
+            "spacy_model": "en_core_web_lg"
         }
     }
 }
