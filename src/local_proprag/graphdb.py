@@ -1,7 +1,7 @@
 # graphdb.py
 
 
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 import ladybug
 from ladybug import QueryResult
@@ -47,6 +47,26 @@ class LadybugGraphDB:
 			"CREATE (p)-[:Mentions]->(e)", 
 			{"pid": id, "ename": entity}
 		)
+
+	
+	def batch_write_to_graph(self, propositions: List[Dict[str, str | List[float | int]]]):
+		# 1. Create all Propositions in one go (if supported)
+		# 2. Collect all edges to be created
+		edge_list = []
+		for prop in propositions:
+			for entity in prop["entities"]:
+				edge_list.append({"pid": prop["id"], "ename": entity})
+		
+		# 3. Use a single MATCH/CREATE pattern or a UNWIND statement
+		# Example Cypher for batching:
+		query = """
+		UNWIND $data AS row
+		MERGE (e:Entity {name: row.ename})
+		WITH row, e
+		MATCH (p:Proposition {id: row.pid})
+		CREATE (p)-[:Mentions]->(e)
+		"""
+		self.conn.execute(query, {"data": edge_list})
 
 
 	def multi_hop_expansion(self, id: str, hops: int = 1) -> List[str]:

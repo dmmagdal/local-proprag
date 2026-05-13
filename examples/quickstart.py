@@ -104,12 +104,22 @@ def main():
 
 	# Ingest and index the documents to the proprag.
 	for split_name, data in documents.items():
-		for doc in tqdm(data, desc=f"Ingesting {split_name} split into Proposition RAG"):
-			proprag.ingest(
-				text=doc["chunk"], 
-				doc_id=doc["chunk_id"],
+		# for idx in tqdm(data, desc=f"Ingesting {split_name} split into Proposition RAG"):
+		# 	proprag.ingest(
+		# 		text=doc["chunk"], 
+		# 		doc_id=doc["chunk_id"],
+		# 		table_name=vector_config["table_name"]
+		# 	) # Single-document ingestion.
+		for idx in tqdm(range(0, len(data), vector_config["batch_size"]), desc=f"Ingesting {split_name} split into Proposition RAG"):
+			docs = data[idx:idx + vector_config["batch_size"]]
+			doc_list = [
+				{"id": chunk_id, "text": chunk}
+				for chunk_id, chunk in zip(docs["chunk_id"], docs["chunk"])
+			]
+			proprag.batch_ingest(
+				documents=doc_list,
 				table_name=vector_config["table_name"]
-			)
+			) # Batch document ingeston.
 
 	# Perform a query on the proprag.
 	sampled_queries = queries.shuffle(seed=SEED).select(range(5))

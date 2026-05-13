@@ -2,12 +2,10 @@
 
 
 import gc
-import json
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 
 from local_vectors import LocalEmbedder, LanceDBConnection
-import networkx as nx
 import pandas as pd
 import pyarrow as pa
 
@@ -59,6 +57,7 @@ class PropRAG:
 		# Flag whether we're using binary embeddings or full precision 
 		# (as per supported on local-vectors).
 		self.use_binary = use_binary
+		self.batch_size = batch_size
 
 		# Initialize the graphdb.
 		self.graphdb = LadybugGraphDB(
@@ -116,6 +115,38 @@ class PropRAG:
 		self.vectordb.update_table(table_name, props)
 		self.graphdb.checkpoint()
 		gc.collect()
+
+
+	def batch_ingest(self, documents: List[Dict[str, str]], table_name: str):
+		all_propositions = []
+
+		# 1. Extraction Phase (CPU Bound)
+		for doc in documents:
+			props = self.prop_extractor.extract_propositions(doc["id"], doc["text"])
+			all_propositions.extend(props)
+
+		# 2. Embedding Phase (GPU/MPS Bound)
+		# Extract just the text for batch processing
+		texts_to_embed = [p["text"] for p in all_propositions]
+		
+		# LocalEmbedder likely handles internal batching, 
+		# but calling it once for the whole list is much faster.
+		embeddings = self.embedder.embed_text(
+			texts_to_embed,
+			truncate=True,
+			to_binary=self.use_binary,
+			vectors_only=True
+		)
+
+		# Map embeddings back to propositions
+		for i, prop in enumerate(all_propositions):
+			vector_key = "vector_binary" if self.use_binary else "vector_full"
+			prop["vector"] = embeddings[i][vector_key]
+
+		# 3. Database Write Phase (I/O Bound)
+		self.graphdb.batch_write_to_graph(all_propositions)
+		self.vectordb.update_table(table_name, all_propositions)
+		self.graphdb.checkpoint()
 
 
 	def query(self, query: str, table_name: str, top_k: int = 5, hops: int = 1) -> str:
