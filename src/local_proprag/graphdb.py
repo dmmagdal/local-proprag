@@ -1,7 +1,7 @@
 # graphdb.py
 
 
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 import ladybug
 from ladybug import QueryResult
@@ -49,7 +49,7 @@ class LadybugGraphDB:
 		)
 
 	
-	def batch_write_to_graph(self, propositions: List[Dict[str, str | List[float | int]]]):
+	def batch_write_to_graph(self, propositions: List[Dict[str, str | List[float | int]]]) -> None:
 		# 1. Create all Propositions in one go (if supported)
 		# 2. Collect all edges to be created
 		edge_list = []
@@ -60,16 +60,16 @@ class LadybugGraphDB:
 		# 3. Use a single MATCH/CREATE pattern or a UNWIND statement
 		# Example Cypher for batching:
 		query = """
-		UNWIND $data AS row
-		MERGE (e:Entity {name: row.ename})
-		WITH row, e
-		MATCH (p:Proposition {id: row.pid})
-		CREATE (p)-[:Mentions]->(e)
+			UNWIND $data AS row
+			MERGE (e:Entity {name: row.ename})
+			WITH row, e
+			MATCH (p:Proposition {id: row.pid})
+			CREATE (p)-[:Mentions]->(e)
 		"""
 		self.conn.execute(query, {"data": edge_list})
 
 
-	def multi_hop_expansion(self, id: str, hops: int = 1) -> List[str]:
+	def multi_hop_expansion(self, id: str, hops: int = 1) -> List[QueryResult]:
 		query = f"""
 			MATCH (p1:Proposition {{id: $id}})-[:Mentions*1..{hops}]-(p2:Proposition)
 			WHERE p1.id <> p2.id
@@ -80,4 +80,4 @@ class LadybugGraphDB:
 
 
 	def checkpoint(self) -> None:
-		self.conn.execute("PRAGMA wal_checkpoint(FULL);")
+		self.conn.execute("CHECKPOINT;")

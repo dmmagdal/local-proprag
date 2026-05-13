@@ -66,7 +66,10 @@ def main():
 				os.remove(artifact)
 
 	# Detect GPU accelerators.
-	device = detect_device(force_cpu=True)
+	# device = detect_device(force_cpu=True)
+	device = detect_device()
+	# nomic-ai/nomic-embed-text-v1.5
+	# sentence-transformers/all-MiniLM-L6-v2
 
 	# Initialize proprag with the configuration.
 	proprag = PropRAG(

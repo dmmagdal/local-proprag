@@ -1,6 +1,6 @@
 [project]
 name = "local-proprag"
-version = "0.1.0"
+version = "0.1.1"
 description = "A high-performance, local-first PropRAG utility."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -20,7 +20,7 @@ dependencies = [
     "huggingface-hub>=0.35.3",
     "ladybug>=0.16.1",
     "lancedb>=0.25.1",
-    "local-vectors>=0.1.4",
+    "local-vectors>=0.1.5",
     "networkx>=3.2",
     "numpy>=2.0.2",
     "pyarrow>=21.0.0",

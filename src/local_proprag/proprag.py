@@ -131,7 +131,7 @@ class PropRAG:
 		
 		# LocalEmbedder likely handles internal batching, 
 		# but calling it once for the whole list is much faster.
-		embeddings = self.embedder.embed_text(
+		embeddings = self.embedder.batch_embed_text(
 			texts_to_embed,
 			truncate=True,
 			to_binary=self.use_binary,
