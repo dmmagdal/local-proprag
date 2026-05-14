@@ -8,11 +8,10 @@ from ladybug import QueryResult
 
 
 class LadybugGraphDB:
-	def __init__(self, db_path: str, hipporagv2: bool = False):
+	def __init__(self, db_path: str):
 		# Initialize database and connection.
 		self.db = ladybug.Database(db_path)
 		self.conn = ladybug.Connection(self.db)
-		self.hipporag2 = hipporagv2
 
 		# Initialize table.
 		try:
@@ -50,20 +49,56 @@ class LadybugGraphDB:
 
 	
 	def batch_write_to_graph(self, propositions: List[Dict[str, str | List[float | int]]]) -> None:
-		# 1. Create all Propositions in one go (if supported)
-		# 2. Collect all edges to be created
+		if not propositions:
+			return
+
+		# 1. Create all Propositions in one go.
+		prop_list = [
+			{"id": prop["id"], "txt": prop["text"]} 
+			for prop in propositions
+		]
+		self.conn.execute(
+			"""
+			UNWIND $data AS row
+			MERGE (p:Proposition {id: row.id})
+			SET p.text = row.txt
+			""",
+			{"data": prop_list}
+		)
+
+		# 2. Collect and DEDUPLICATE all edges to be created.
 		edge_list = []
-		for prop in propositions:
-			for entity in prop["entities"]:
-				edge_list.append({"pid": prop["id"], "ename": entity})
+		seen_edges = set()
 		
-		# 3. Use a single MATCH/CREATE pattern or a UNWIND statement
-		# Example Cypher for batching:
+		for prop in propositions:
+			entities = prop.get("entities", [])
+			for entity in entities:
+				# Use a tuple to track uniqueness and avoid duplicates 
+				# in the same batch.
+				edge_tuple = (prop["id"], entity)
+				if edge_tuple not in seen_edges:
+					seen_edges.add(edge_tuple)
+					edge_list.append({"pid": prop["id"], "ename": entity})
+
+		if not edge_list:
+			return
+		
+		# Create all entities first (ensure they exist before linking).
+		unique_entities = [
+			{"ename": e} 
+			for e in list(set(item["ename"] for item in edge_list))
+		]
+		self.conn.execute(
+			"UNWIND $data AS row MERGE (e:Entity {name: row.ename})",
+			{"data": unique_entities}
+		)
+		
+		# 3. Use CREATE instead of MERGE to bypass the 
+		# unordered_map::at bug.
 		query = """
 			UNWIND $data AS row
-			MERGE (e:Entity {name: row.ename})
-			WITH row, e
 			MATCH (p:Proposition {id: row.pid})
+			MATCH (e:Entity {name: row.ename})
 			CREATE (p)-[:Mentions]->(e)
 		"""
 		self.conn.execute(query, {"data": edge_list})
@@ -81,3 +116,7 @@ class LadybugGraphDB:
 
 	def checkpoint(self) -> None:
 		self.conn.execute("CHECKPOINT;")
+
+	
+	def close_db(self) -> None:
+		self.conn.close()

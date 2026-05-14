@@ -146,7 +146,8 @@ class PropRAG:
 		# 3. Database Write Phase (I/O Bound)
 		self.graphdb.batch_write_to_graph(all_propositions)
 		self.vectordb.update_table(table_name, all_propositions)
-		self.graphdb.checkpoint()
+		# self.graphdb.checkpoint()
+		gc.collect()
 
 
 	def query(self, query: str, table_name: str, top_k: int = 5, hops: int = 1) -> str:
@@ -157,7 +158,7 @@ class PropRAG:
 		
 		# Semantic search (via vector database).
 		query_vector = self.embedder.embed_text(
-			self.query,
+			query,
 			truncate=True,
 			to_binary=self.use_binary,
 			vectors_only=True

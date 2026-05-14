@@ -55,8 +55,9 @@ def main():
 	storage_artifacts = [
 		vector_config["vector_db"],
 		graph_config["graph_db"],
-		"./graph",
-		"graph.wal",
+		f"{graph_config['graph_db']}.wal",
+		f"{graph_config['graph_db']}.wal.checkpoint",
+		f"{graph_config['graph_db']}.shadow"
 	]
 	for artifact in storage_artifacts:
 		if os.path.exists(artifact):
@@ -124,6 +125,12 @@ def main():
 				documents=doc_list,
 				table_name=vector_config["table_name"]
 			) # Batch document ingeston.
+		
+		# Checkpoint the graphdb after each split. We checkpoint here 
+		# instead of after each batch because ladybug db has a bug 
+		# where it runs out of memory if there are too many subsequent
+		# writes to the db.
+		proprag.graphdb.checkpoint()
 
 	# Perform a query on the proprag.
 	sampled_queries = queries.shuffle(seed=SEED).select(range(5))

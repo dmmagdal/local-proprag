@@ -21,6 +21,8 @@ wheels/
 # Graphdb
 /examples/graph
 /examples/graph.wal
+/examples/graph.wal.checkpoint
+/examples/graph.shadow
 
 # Vectordb
 **/vectors
