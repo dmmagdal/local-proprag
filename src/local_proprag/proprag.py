@@ -80,7 +80,10 @@ class PropRAG:
 
 
 	def build_vector_table(self, table_name: str, schema: pa.Schema) -> None:
-		self.vectordb.create_table(table_name, schema)
+		if table_name not in self.vectordb.table_names():
+			self.vectordb.create_table(table_name, schema)
+		else:
+			print(f"Table {table_name} already exists in Vector DB.")
 
 
 	def set_query_metric(self, query_metric: str) -> None:

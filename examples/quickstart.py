@@ -1,6 +1,7 @@
 # quickstart.py
 
 
+import argparse
 import json
 import os
 import random
@@ -18,6 +19,20 @@ SEED = 1234
 random.seed(SEED)
 
 def main():
+	# Argument parser.
+	parser = argparse.ArgumentParser()
+	parser.add_argument(
+		"--no-reset",
+		action="store_true",
+		help="Whether or not to clean out all files and return document ingestion on the system before performing query. Default is False/not specified."
+	)
+	parser.add_argument(
+		"--sequential_store",
+		action="store_true",
+		help="Whether or not to ingest the documents sequentially (one-by-one) or in a batch. Default is False/not specified."
+	)
+	args = parser.parse_args()
+
 	# Load the dataset.
 	target_dataset = "illuin-conteb/narrative-qa"
 	cache_dir = f"./{target_dataset.replace('/', '_')}_cache"
@@ -59,12 +74,13 @@ def main():
 		f"{graph_config['graph_db']}.wal.checkpoint",
 		f"{graph_config['graph_db']}.shadow"
 	]
-	for artifact in storage_artifacts:
-		if os.path.exists(artifact):
-			if os.path.isdir(artifact):
-				shutil.rmtree(artifact)
-			else:
-				os.remove(artifact)
+	if not args.no_reset:
+		for artifact in storage_artifacts:
+			if os.path.exists(artifact):
+				if os.path.isdir(artifact):
+					shutil.rmtree(artifact)
+				else:
+					os.remove(artifact)
 
 	# Detect GPU accelerators.
 	# device = detect_device(force_cpu=True)
@@ -90,67 +106,79 @@ def main():
 		spacy_model=llm_config["spacy_model"],
 	)
 
-	# Define schema (this is heavily dependent upon the datasets) and
-	# pass that to the proprag so that the vectordb can build the 
-	# table.
-	schema = pa.schema([
-		pa.field("entities", pa.list_(pa.string())),
-		pa.field("vector", pa.list_(
-			pa.uint8() if vector_config["use_binary"] else pa.float32(), 
-			proprag.get_dims()
-		)),
-		pa.field("id", pa.string()),
-		pa.field("text", pa.string())
-	])
-	proprag.build_vector_table(
-		table_name=vector_config["table_name"],
-		schema=schema,
-	)
+	if not args.no_reset:
+		# Define schema (this is heavily dependent upon the datasets) and
+		# pass that to the proprag so that the vectordb can build the 
+		# table.
+		schema = pa.schema([
+			pa.field("entities", pa.list_(pa.string())),
+			pa.field("vector", pa.list_(
+				pa.uint8() if vector_config["use_binary"] else pa.float32(), 
+				proprag.get_dims()
+			)),
+			pa.field("id", pa.string()),
+			pa.field("text", pa.string())
+		])
+		proprag.build_vector_table(
+			table_name=vector_config["table_name"],
+			schema=schema,
+		)
 
-	# Ingest and index the documents to the proprag.
-	for split_name, data in documents.items():
-		# for idx in tqdm(data, desc=f"Ingesting {split_name} split into Proposition RAG"):
-		# 	proprag.ingest(
-		# 		text=doc["chunk"], 
-		# 		doc_id=doc["chunk_id"],
-		# 		table_name=vector_config["table_name"]
-		# 	) # Single-document ingestion.
-		for idx in tqdm(range(0, len(data), vector_config["batch_size"]), desc=f"Ingesting {split_name} split into Proposition RAG"):
-			docs = data[idx:idx + vector_config["batch_size"]]
-			doc_list = [
-				{"id": chunk_id, "text": chunk}
-				for chunk_id, chunk in zip(docs["chunk_id"], docs["chunk"])
-			]
-			proprag.batch_ingest(
-				documents=doc_list,
-				table_name=vector_config["table_name"]
-			) # Batch document ingeston.
-		
-		# Checkpoint the graphdb after each split. We checkpoint here 
-		# instead of after each batch because ladybug db has a bug 
-		# where it runs out of memory if there are too many subsequent
-		# writes to the db.
-		proprag.graphdb.checkpoint()
+		# Ingest and index the documents to the proprag.
+		for split_name, data in documents.items():
+			if args.sequential_store:
+				# Single (sequential) document ingestion.
+				for idx in tqdm(data, desc=f"Ingesting {split_name} split into Proposition RAG"):
+					proprag.ingest(
+						text=data[idx]["chunk"], 
+						doc_id=data[idx]["chunk_id"],
+						table_name=vector_config["table_name"]
+					)
+			else:
+				# Batch document ingeston.
+				for idx in tqdm(range(0, len(data), vector_config["batch_size"]), desc=f"Ingesting {split_name} split into Proposition RAG"):
+					docs = data[idx:idx + vector_config["batch_size"]]
+					doc_list = [
+						{"id": chunk_id, "text": chunk}
+						for chunk_id, chunk in zip(docs["chunk_id"], docs["chunk"])
+					]
+					proprag.batch_ingest(
+						documents=doc_list,
+						table_name=vector_config["table_name"]
+					)
+			
+			# Checkpoint the graphdb after each split. We checkpoint here 
+			# instead of after each batch because ladybug db has a bug 
+			# where it runs out of memory if there are too many subsequent
+			# writes to the db.
+			proprag.graphdb.checkpoint()
 
 	# Perform a query on the proprag.
-	sampled_queries = queries.shuffle(seed=SEED).select(range(5))
-	for query in sampled_queries:
-		question, chunk_id, answer = query["og_query"], query["chunk_id"], query["answer"]
-		proprag_answer = proprag.query(question)
+	for split in queries:
+		print(f"Sampling questions to be answered from {split} split.")
+		print("=" * 72)
+		sampled_queries = queries[split].shuffle(seed=SEED)\
+			.select(range(5))
+		for query in sampled_queries:
+			question, chunk_id, answer = query["og_query"], query["chunk_id"], query["answer"]
+			proprag_answer = proprag.query(question, vector_config["table_name"])
 
-		# Output results.
-		print(f"Question: {question}")
-		print(f"Expected answer: {answer} (chunk id {chunk_id})")
-		print(f"Generated answer: {proprag_answer}")
-		print("-" * 72)
+			# Output results.
+			print(f"Question: {question}")
+			print(f"Expected answer: {answer} (chunk id {chunk_id})")
+			print(f"Generated answer: {proprag_answer}")
+			print("-" * 72)
 
-	# Clear all tables or databases since we're done.
-	for artifact in storage_artifacts:
-		if os.path.exists(artifact):
-			if os.path.isdir(artifact):
-				shutil.rmtree(artifact)
-			else:
-				os.remove(artifact)
+		print("=" * 72)
+
+	if not args.no_reset:
+		# Clear all tables or databases since we're done.
+		for artifact in storage_artifacts:
+			if os.path.exists(artifact):
+				if os.path.isdir(artifact):
+					shutil.rmtree(artifact)
+				else:
+					os.remove(artifact)
 
 	# Exit the program.
 	exit(0)
