@@ -27,7 +27,7 @@ def main():
 		help="Whether or not to clean out all files and return document ingestion on the system before performing query. Default is False/not specified."
 	)
 	parser.add_argument(
-		"--sequential_store",
+		"--sequential-store",
 		action="store_true",
 		help="Whether or not to ingest the documents sequentially (one-by-one) or in a batch. Default is False/not specified."
 	)
