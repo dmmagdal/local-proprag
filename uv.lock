@@ -1000,7 +1000,7 @@ requires-dist = [
     { name = "huggingface-hub", specifier = ">=0.35.3" },
     { name = "ladybug", specifier = ">=0.16.1" },
     { name = "lancedb", specifier = ">=0.25.1" },
-    { name = "local-vectors", specifier = ">=0.1.5" },
+    { name = "local-vectors", specifier = ">=0.1.7" },
     { name = "networkx", specifier = ">=3.2" },
     { name = "numpy", specifier = ">=2.0.2" },
     { name = "pyarrow", specifier = ">=21.0.0" },
@@ -1021,7 +1021,7 @@ dev = [
 
 [[package]]
 name = "local-vectors"
-version = "0.1.6"
+version = "0.1.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "accelerate" },
@@ -1038,9 +1038,9 @@ dependencies = [
     { name = "torch", version = "2.11.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'darwin'" },
     { name = "transformers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/59/0f/5995100618c80d90ac9658ab5c0f34897c922c8a942fb867635e39b96929/local_vectors-0.1.6.tar.gz", hash = "sha256:a512bf9618130c8b94746f3eb1e8d0d70aa6bbd28575321e1e18c529c72a3a96", size = 118908, upload-time = "2026-05-13T17:32:13.009Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/53/3f/b757adf2d520c70c0ca913c29c55d6716480adb3bc76f189f0d6a5eeef96/local_vectors-0.1.7.tar.gz", hash = "sha256:21a005f55fcf81c028ebbf3a48df2575291d40a7eec70ef6fcc6ffa7328b6abc", size = 114007, upload-time = "2026-05-15T18:49:12.389Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c9/d8/b7bcb990b1a4fb5dc28859698e9263f586ab0f560a3536d2c0f963a56ef6/local_vectors-0.1.6-py3-none-any.whl", hash = "sha256:d374383804ac810ba825b932c81e8ae98a8ebf3732f07d6ec90428961f738176", size = 15698, upload-time = "2026-05-13T17:32:11.513Z" },
+    { url = "https://files.pythonhosted.org/packages/ea/cf/531710f43b999bbb544e02fb344f0e6e99dbfca650a99fec819ef1ed305c/local_vectors-0.1.7-py3-none-any.whl", hash = "sha256:8e3e0de296f9766812d4128156183a3e431abaee282bd081ba2180ffef892329", size = 15699, upload-time = "2026-05-15T18:49:13.495Z" },
 ]
 
 [[package]]
